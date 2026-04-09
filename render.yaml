@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: fintech-backend
+    runtime: python3
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./fintech.db
+      - key: SECRET_KEY
+        value: your-production-secret-key-change-this
+      - key: PYTHON_VERSION
+        value: 3.12
