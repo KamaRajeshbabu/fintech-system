@@ -6,11 +6,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.api.routes import transactions, auth
 from app.core.database import Base, engine
+from app.core.config import settings
 from decimal import Decimal
 import logging
 import json
 import os
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Custom JSONResponse that handles Decimal values
@@ -26,12 +32,20 @@ class DecimalJSONResponse(JSONResponse):
         ).encode("utf-8")
 
 # Try to create tables, but don't fail if database is not available yet
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
-except Exception as e:
-    logger.warning(f"Could not create database tables on startup: {e}")
-    logger.info("Tables will be created when database becomes available")
+def initialize_database():
+    """Initialize the database with proper error handling"""
+    try:
+        logger.info(f"Initializing database: {settings.DATABASE_URL}")
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ Database tables created successfully")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize database: {e}")
+        logger.info("⚠️ Retrying on first request...")
+        return False
+
+# Initialize database on startup
+db_initialized = initialize_database()
 
 app = FastAPI(
     title="Fintech Backend System",
@@ -55,7 +69,15 @@ app.include_router(transactions.router, prefix="/api/transactions")
 @app.get("/health")
 def health_check():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    # Try to initialize database if it failed on startup
+    global db_initialized
+    if not db_initialized:
+        db_initialized = initialize_database()
+    
+    return {
+        "status": "healthy",
+        "database": "initialized" if db_initialized else "initializing"
+    }
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):

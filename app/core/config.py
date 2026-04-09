@@ -6,8 +6,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
     
     # Use SQLite for local development, PostgreSQL for production
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./fintech.db")
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    # For Render: use /tmp/fintech.db for persistence, or set DATABASE_URL to PostgreSQL
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:////tmp/fintech.db")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_HOURS: int = 24
     DEBUG: bool = False
